@@ -5,6 +5,7 @@ from app import app,db
 
 def update_like_dislike_count(self):  # insert the like and dislike count
     likes_dislikes_obj = LikesDislikes.query.filter().all()
+    #get all likes
 
     if not likes_dislikes_obj:
         app.logger.info("No comment are liked or disliked ")

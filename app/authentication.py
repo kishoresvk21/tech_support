@@ -3,7 +3,7 @@ import jwt
 from app import app
 import os
 from flask import request, jsonify
-# from user.models_package import User
+from app.models_package.models import User
 from functools import wraps
 
 def deserialize_to_json(user_data):
@@ -67,6 +67,10 @@ def get_user_id(self):
         return (decode_auth_token(request.headers['token'])[1]).get('user_id')
     except:
         return None
+
+def is_active(user_id):
+    check_status=User.query.filter_by(id=user_id).first()
+    return check_status.status
 
 # def is_admin_or_superadmin(func):
 #     @wraps(func)

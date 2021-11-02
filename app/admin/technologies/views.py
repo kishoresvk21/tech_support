@@ -16,9 +16,8 @@ class TechFilter(Resource):
                 return jsonify(status=404, message="No Technologies in DB")
 
             for itr in order_by_technology_obj:
-                if itr.status:
-                    dt = technology_serializer(itr)
-                    t_list.append(dt)
+                dt = technology_serializer(itr)
+                t_list.append(dt)
 
             if not t_list:
                 app.logger.info("No Technologies in DB")
@@ -105,7 +104,7 @@ class AdminTechClass(Resource):
         if not check_tech:
             app.logger.info("tech not found")
             return jsonify(status=400, message="tech not found")
-        if check_edited_tech:
+        if check_edited_tech and (not(check_edited_tech.id==tech_id)):
             app.logger.info("technology already exists")
             return jsonify(status=400, message="technology already exists")
         if not (check_user.roles == 2 or check_user.roles == 3):
@@ -122,7 +121,7 @@ class AdminTechClass(Resource):
         check_tech.name = technology_name
         check_tech.updated_at = date_time_obj
         db.session.commit()
-        return jsonify(status=200, message="added successfully")
+        return jsonify(status=200, message="updated successfully")
 
 class TechnologiesCRUD(Resource):
     def get(self):

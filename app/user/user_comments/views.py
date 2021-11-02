@@ -6,7 +6,7 @@ from app.authentication import authentication
 from app.models_package.models import User, Queries, Comments
 from app.serializer import comments_serializer
 from app.pagination import get_paginated_list
-from app.authentication import get_user_id
+from app.authentication import get_user_id,is_active
 
 class CommentCRUD(Resource):
     @authentication
@@ -18,6 +18,9 @@ class CommentCRUD(Resource):
         if not (query_id and user_id and comment):
             app.logger.info("query_id,user_id and comment are required")
             return jsonify(status=400, message="query_id,user_id and comment are required")
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         queries_check = Queries.query.filter_by(id=query_id).first()
         user_check = db.session.query(User).filter_by(id=user_id).first()
         if not user_check:
@@ -37,13 +40,13 @@ class CommentCRUD(Resource):
     @authentication
     def put(self):
         data = request.get_json() or {}
-        if not data:
-            app.logger.info("No input(s)")
-            return jsonify(status=400, message="No input(s)")
         try:
             query_id = data.get('query_id')
             user_id = data.get('user_id')
             comment_id = data.get('comment_id')
+            if not is_active(user_id):
+                app.logger.info("User is temporarily disabled")
+                return jsonify(status=404, message="User is temporarily disabled")
             edit_comment_by_id = db.session.query(Comments).filter_by(id=comment_id).first()
             check_user = db.session.query(User).filter_by(id=user_id).first()
             check_queries_auth = db.session.query(Queries).filter_by(u_id=user_id).first()
@@ -78,6 +81,9 @@ class CommentCRUD(Resource):
         if not (query_id and user_id and comment_id):
             app.logger.info("comment_id , user_id and query_id are required")
             return jsonify(status=200, message="Query_id , user_id and query_id are required")
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         query_check = Queries.query.filter_by(id=query_id).first()
         user_check = User.query.filter_by(id=user_id).first()
         if not user_check:
@@ -124,6 +130,9 @@ class GetCommentByQuery(Resource):
     def get(self):
         user_id=get_user_id(self)
         query_id=request.args.get('query_id')
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         comment_obj = Comments.query.filter_by(q_id=query_id).all()
         if not comment_obj:
             app.logger.info("No Comments found")
@@ -142,6 +151,9 @@ class GetCommentsByUserId(Resource):
 
     def get(self, user_id):  # send all the comments based on user_id
         try:
+            if not is_active(user_id):
+                app.logger.info("User is temporarily disabled")
+                return jsonify(status=404, message="User is temporarily disabled")
             c_list = []
             comments_obj = Comments.query.filter_by(u_id=user_id).all()
 

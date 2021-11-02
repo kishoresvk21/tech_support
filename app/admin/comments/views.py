@@ -10,37 +10,6 @@ from app.authentication import get_user_id
 from sqlalchemy import or_
 class CommentClass(Resource):
     @authentication
-    def put(self):
-        data = request.get_json() or {}
-        if not data:
-            app.logger.info("No input(s)")
-            return jsonify(status=400, message="No input(s)")
-        query_id = data.get('query_id')
-        user_id = data.get('user_id')
-        comment_id = data.get('comment_id')
-        edited_comment = data.get('edited_comment')
-
-        if not (user_id and edited_comment and comment_id):
-            app.logger.info("User_id , edited_comment and comment_id are required fields")
-            return jsonify(status=400, message="User_id , edited_comment and comment_id are required fields")
-
-        edit_comment_by_id = Comments.query.filter_by(id=comment_id).first()
-        check_user = User.query.filter_by(id=user_id).first()
-        if not (check_user.roles == 2 or check_user.roles == 3):
-            app.logger.info("User not allowed to edit")
-            return jsonify(status=404, message="User not allowed to edit")
-
-        if not edit_comment_by_id:
-            app.logger.info("Comment not found")
-            return jsonify(status=400, message="Comment not found")
-
-        edit_comment_by_id.msg = edited_comment
-        db.session.commit()
-        app.logger.info("Comment edited")
-        return jsonify(status=200, message="Comment edited",
-                       data=comments_serializer(edit_comment_by_id,user_id))
-
-    @authentication
     def delete(self):
         data = request.get_json() or {}
         user_id = get_user_id(self)

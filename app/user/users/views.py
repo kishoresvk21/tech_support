@@ -6,10 +6,10 @@ from flask_restplus import Resource
 from app import app, db
 from sqlalchemy import or_, and_
 import re
-from app.authentication import encode_auth_token, authentication
+from app.authentication import encode_auth_token, authentication,is_active
 from app.serializer import user_serializer, replace_with_ids
 from app.utils.smtp_mail import send_mail_to_reset_password
-
+from app.utils.form_validation import *
 class Login(Resource):
     def post(self):
         data = request.get_json() or {}
@@ -24,9 +24,9 @@ class Login(Resource):
             return jsonify(status=400, message="email or mobile and password are required")
         user = User.query.filter(or_(User.email == email, User.mobile == mobile)).first()
         if user:
-            if user.status == 0:
-                app.logger.info("User is disabled temporarily")
-                return jsonify(status=400,message="User is disabled temporarily")
+            if not is_active(user.id):
+                app.logger.info("User is temporarily disabled")
+                return jsonify(status=404, message="User is temporarily disabled")
             if check_password_hash(user.password, password):
                 token = encode_auth_token(user)
                 app.logger.info(token)
@@ -65,17 +65,16 @@ class Register(Resource):
         # check all data exists or not
         if not (name and email and mobile and list_of_tech and password):
             msg = 'name, email, mobile, technology and password are required fields'
-        # check valid email
-        elif not re.match(r'[^@]+@[^@]+\.[^@]+', email):
+            # check valid name
+        elif not name_validator(name):
+            msg = 'Invalid name'
+            # check valid email
+        elif not email_validator(email):
             msg = 'Invalid email address'
-        elif not (re.match(r'[0-9]+', mobile) and len(mobile) == 10):
+        elif not number_validation(mobile):
             msg = 'Invalid phone number'
-        # check valid name
-        elif not re.match(r'[A-Za-z0-9]+', name):
-            msg = 'Name must contain only characters and numbers'
-        elif not re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{6,20}$', password):
-            msg = 'Password should contain min 8 characters, a special character, Uppercase, lowercase and a number'
-        # check user already exist
+        elif not password_validator(password):
+            msg = 'Invalid password'
         else:
             try:
                 user = User.query.filter(or_(User.email == email,
@@ -115,7 +114,10 @@ class UpdatePassword(Resource):
         old_password = data.get("old_password")
         new_password = data.get("new_password")
         confirm_new_password = data.get("confirm_new_password")
-
+        user_id=(User.query.filter_by(email=email).first()).id
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         if not ((email or mobile) and (old_password and new_password and confirm_new_password)):
             app.logger.info(f'email (or) mobile , old_password, new_password and confirm_new_password required')
             return jsonify(status=400,
@@ -129,12 +131,9 @@ class UpdatePassword(Resource):
                         if new_password == old_password:
                             app.logger.info("New password and old password should not be same")
                             return jsonify(status=400, message="New password and old password should not be same")
-                        if not re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{6,20}$',
-                                        new_password):
-                            app.logger.info(
-                                "Password should contain min 8 characters, a special character, Uppercase, lowercase and a number")
-                            return jsonify(status=400,
-                                           message='Password should contain min 8 characters, a special character, Uppercase, lowercase and a number')
+                        if not password_validator(new_password):
+                            app.logger.info("Invalid password")
+                            return jsonify(status=400, message='Invalid password')
                         user.password = generate_password_hash(new_password, method='sha256')
                         db.session.commit()
                         app.logger.info(f'{user.name} Password updated successfully')
@@ -155,17 +154,21 @@ class UpdatePassword(Resource):
 
 class ForgotPassword(Resource):
     def post(self):
-        data = request.get_json()
+        data = request.get_json() or {}
         email = data.get("email")
 
         if not email:
             app.logger.info("email field is required")
             return jsonify(status=400,message="email field is required")
 
+
         else:
             try:
                 user = User.query.filter(User.email == email).first()
                 if user:
+                    if not is_active(user.id):
+                        app.logger.info("User is temporarily disabled")
+                        return jsonify(status=404, message="User is temporarily disabled")
                     new_password = send_mail_to_reset_password(user.email, user.name)
                     if new_password == 'Error':
                         app.logger.info("mail sending failed")
@@ -191,6 +194,9 @@ class UserProfile(Resource):
         data = request.get_json() or {}
         try:
             user_id = data.get('user_id')
+            if not is_active(user_id):
+                app.logger.info("User is temporarily disabled")
+                return jsonify(status=404, message="User is temporarily disabled")
             user_update = User.query.filter_by(id=user_id).first()
         except:
             app.logger.info("User not found")
@@ -200,8 +206,8 @@ class UserProfile(Resource):
         if not (name and technology and user_id):
             app.logger.info("name,technology and user_id are required")
             return jsonify(status=400, message="name,technology and user_id are required")
-        elif not re.match(r'[A-Za-z0-9]+', name):
-            msg = 'name must contain only characters and numbers'
+        elif not name_validator(name):
+            msg = 'Invalid name'
             app.logger.info(msg)
             return jsonify(status=404, message=msg)
         else:
@@ -225,6 +231,9 @@ class UserProfile(Resource):
 class GetProfile(Resource):
     def get(self, user_id):
         user_data = User.query.filter_by(id=user_id).first()
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         if not user_data:
             app.logger.info("user not found")
             return jsonify(status=400, message="user not found")

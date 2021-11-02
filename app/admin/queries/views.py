@@ -10,40 +10,6 @@ from app.serializer import query_serializer
 
 class QueriesClass(Resource):
     @authentication
-    def put(self):
-        data = request.get_json() or {}
-        query_id = data.get('query_id')
-        user_id = data.get('user_id')
-        tech = data.get('technology')
-        title = data.get('title')
-        description = data.get('description')
-        if not (query_id and user_id and tech and title and description):
-            app.logger.info("query_id ,user_id , technology , title and description are required fields")
-            return jsonify(status=400, message="query_id ,user_id , technology , title and description are required fields")
-
-        user_check = User.query.filter_by(id=user_id).first()
-        tech_check = Technologies.query.filter_by(name=tech).first()
-        query_check = Queries.query.filter_by(id=query_id).first()
-
-        if not (user_check and tech_check and query_check):
-            app.logger.info("User or technology or query not found")
-            return jsonify(status=400, message="User or technology or query not found")
-        if query_check:
-            if ((user_check.roles == 2) or (user_check.roles == 3)):
-                query_check.title = title
-                query_check.description = description
-                query_check.t_id = tech_check.id
-                today = datetime.now()
-                date_time_obj = today.strftime('%Y/%m/%d %H:%M:%S')
-                query_check.updated_at = date_time_obj
-                db.session.commit()
-                return jsonify(status=200, data=query_serializer(query_check), message="Query changed successfully")
-            app.logger.info("User not allowed to edit")
-            return jsonify(status=404, message="User not allowed to edit")
-        app.logger.info("Query didn't found")
-        return jsonify(status=404, message="Query didn't found")
-
-    @authentication
     def delete(self):
         data = request.get_json() or {}
         query_id = data.get('query_id')
@@ -180,46 +146,3 @@ class Unanswered(Resource):
         app.logger.info("Returning queries data")
         return jsonify(status=200,data=get_paginated_list(unanswered_queries_list, '/admin/query/unanswered', start=request.args.get('start', 1),
                                           limit=request.args.get('limit', 3),with_params=False),message="Returning unanswered queries data")
-
-
-
-"""
-@authentication
-    def post(self):
-        data = request.get_json()
-        if not data:
-            app.logger.info("No input(s)")
-            return jsonify(status=400, message="No input(s)")
-        title = data.get('title')
-        user_id = data.get('user_id')
-        description = data.get('description')
-        tech = data.get('technology')
-        if not (title and description and tech and user_id):
-            app.logger.info("title, description, user_id and technology are required")
-            return jsonify(status=200, message="title, description, user_id and technology are required")
-
-        user_check = User.query.filter_by(id=user_id).first()
-        tech_check = Technologies.query.filter_by(name=tech).first()
-        if not (tech_check and user_check):
-            app.logger.info("user or technology not found")
-            return jsonify(status=400, message="user or technology not found")
-        query_insertion = Queries.query.filter(or_(Queries.title == title,
-                                                   Queries.description == description)).first()
-        if query_insertion:
-            if query_insertion.title == title:
-                app.logger.info("Data already exist")
-                return jsonify(status=200, message="Data already exist")
-
-        today = datetime.now()
-        date_time_obj = today.strftime('%Y/%m/%d %H:%M:%S')
-        try:
-            question = Queries(user_id, title, description, tech_check.id, date_time_obj, date_time_obj)
-            db.session.add(question)
-            db.session.commit()
-        except:
-            app.logger.info("user not found")
-            return jsonify(status=400, message="user not found")
-        app.logger.info("Query inserted successfully")
-        response = query_serializer(question)
-        return jsonify(status=200, data=response, message="Query inserted successfully")
-"""

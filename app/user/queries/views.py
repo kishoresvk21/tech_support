@@ -7,7 +7,8 @@ from app.models_package.models import User,Technologies,Queries,Comments
 from datetime import datetime
 from app.pagination import get_paginated_list
 from app.serializer import query_serializer
-from app.authentication import decode_auth_token
+from app.authentication import decode_auth_token,is_active
+from app.utils.form_validation import *
 class QueriesClass(Resource):
     @authentication
     def post(self):
@@ -19,10 +20,16 @@ class QueriesClass(Resource):
         user_id = data.get('user_id')
         description = data.get('description')
         tech = data.get('technology')
+        # files=
         if not (title and description and tech and user_id):
             app.logger.info("title, description, user_id and technology are required")
-            return jsonify(status=200, message="title, description, user_id and technology are required")
-
+            return jsonify(status=400, message="title, description, user_id and technology are required")
+        if not title_validator(title):
+            app.logger.info("Invalid title length")
+            return jsonify(status=400, message="Invalid title length")
+        if not description_validator(description):
+            app.logger.info("Invalid description length")
+            return jsonify(status=400, message="Invalid description length")
         user_check = User.query.filter_by(id=user_id).first()
         tech_check = Technologies.query.filter_by(name=tech).first()
         if not tech_check:
@@ -36,7 +43,7 @@ class QueriesClass(Resource):
         if query_insertion:
             if query_insertion.title == title:
                 app.logger.info("Data already exist")
-                return jsonify(status=200, message="Data already exist")
+                return jsonify(status=400, message="Data already exist")
 
         today = datetime.now()
         date_time_obj = today.strftime('%Y/%m/%d %H:%M:%S')
@@ -65,6 +72,9 @@ class QueriesClass(Resource):
         if not (query_id and user_id and tech and title and description):
             app.logger.info("query_id, user_id, technology, title and description are required fields")
             return jsonify(status=400, message="query_id, user_id, technology, title and description are required fields")
+        if not title_validator(title):
+            app.logger.info("Invalid title length")
+            return jsonify(status=400, message="Invalid title length")
         user_check = User.query.filter_by(id=user_id).first()
         tech_check = Technologies.query.filter_by(name=tech).first()
         query_check = Queries.query.filter_by(id=query_id).first()

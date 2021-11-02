@@ -6,10 +6,11 @@ from werkzeug.security import generate_password_hash,check_password_hash
 import re
 from app import app, db
 from app.authentication import authentication
-from app.authentication import get_user_id
+from app.authentication import get_user_id,is_active
 from app.pagination import get_paginated_list
 from sqlalchemy import or_
 from app.serializer import role_serializer,replace_with_ids,user_serializer
+from app.utils.form_validation import *
 class AdminUserDetails(Resource):
    @authentication
    def get(self):
@@ -19,6 +20,9 @@ class AdminUserDetails(Resource):
        if not admin:
            app.logger.info("Admin not found")
            return jsonify(status=404, message="Admin not found")
+       if not is_active(user_id):
+           app.logger.info("User is temporarily disabled")
+           return jsonify(status=404, message="User is temporarily disabled")
        if admin.roles == 1:
            app.logger.info("User can not view the details")
            return jsonify(status=404, message="User can not view the details")
@@ -45,12 +49,16 @@ class EditProfile(Resource):
             return jsonify(status=404, message="User can not change")
         name = data.get('name')
         technology = data.get('technology')
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         if not (name and technology):
             app.logger.info("name, technology are required")
             return jsonify(status=400, message="name, technology are required")
 
-        elif not re.match(r'[A-Za-z0-9]+', name):
-            msg = 'name must contain only characters and numbers'
+
+        elif not name_validator(name):
+            msg = 'Invalid name'
             app.logger.info(msg)
             return jsonify(status=404, message=msg)
         else:
@@ -74,6 +82,9 @@ class ChangePassword(Resource):
         if not user:
             app.logger.info("User not found")
             return jsonify(status=400, message="User not found")
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
 
         if user.roles == 1:
             app.logger.info("User can not change")
@@ -93,12 +104,10 @@ class ChangePassword(Resource):
                     if new_password == old_password:
                         app.logger.info("New password and old password should not be same")
                         return jsonify(status=400, message="New password and old password should not be same")
-                    if not re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{6,20}$',
-                                    new_password):
-                        app.logger.info(
-                            "Password should contain min 8 characters, a special character, Uppercase, lowercase and a number")
+                    if not password_validator(new_password):
+                        app.logger.info("Invalid password")
                         return jsonify(status=400,
-                                       message='Password should contain min 8 characters, a special character, Uppercase, lowercase and a number')
+                                       message='Invalid password')
                     user.password = generate_password_hash(new_password, method='sha256')
                     db.session.commit()
                     app.logger.info(f'{user.name} Password updated successfully')
@@ -120,6 +129,9 @@ class RolesClass(Resource):
         if not user_id:
             app.logger.info("login required")
             return jsonify(status=400, message="login required")
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         check_super_admin = User.query.filter_by(id=user_id).first()
         if not check_super_admin:
             app.logger.info("user not found")
@@ -142,6 +154,9 @@ class RolesClass(Resource):
         if not user_id:
             app.logger.info("login required")
             return jsonify(status=400, message="login required")
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         if not (edited_role and role_id):
             app.logger.info("edited_role, role_id are required fields")
             return jsonify(status=400, message="edited_role, role_id are required fields")
@@ -166,6 +181,9 @@ class RolesClass(Resource):
         if not new_role:
             app.logger.info("new_role is required fields")
             return jsonify(status=400, message="new_role is required fields")
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         check_super_admin=User.query.filter_by(id=user_id).first()
         if not check_super_admin:
             app.logger.info("user not found")
@@ -193,6 +211,9 @@ class RolesClass(Resource):
         if not role_id:
             app.logger.info("role_id is required field")
             return jsonify(status=400, message="role_id is required field")
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         check_super_admin = User.query.filter_by(id=user_id).first()
         if not check_super_admin:
             app.logger.info("user not found")
@@ -220,6 +241,9 @@ class AdminUsersEditDel(Resource):
         if not (change_user_id and new_role):
             app.logger.info("change_user_id and new_role are required")
             return jsonify(status=400, message="change_user_id and new_role are required")
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         check_superadmin = User.query.filter_by(id=user_id).first()
         check_admin = User.query.filter_by(id=change_user_id).first()
 
@@ -253,6 +277,9 @@ class AdminUsersEditDel(Resource):
         if not delete_user_id:
             app.logger.info("delete_user_id required")
             return jsonify(status=400, message="delete_user_id required")
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         check_superadmin = User.query.filter_by(id=user_id).first()
         check_admin = User.query.filter_by(id=delete_user_id).first()
         if not check_superadmin:
@@ -290,6 +317,9 @@ class GetAllAdminUsers(Resource):
         if not check_user:
             app.logger.info("user not found")
             return jsonify(status=400, message="user not found")
+        if not is_active(user_id):
+            app.logger.info("User is temporarily disabled")
+            return jsonify(status=404, message="User is temporarily disabled")
         if not (check_user.roles==2 or check_user.roles==3):
             app.logger.info("only admin or superadmin are allowed")
             return jsonify(status=400, message="only admin or superadmin are allowed")

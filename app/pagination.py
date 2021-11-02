@@ -18,7 +18,8 @@ def get_paginated_list(results, url, start, limit, with_params):
         obj['previous'] = ''
     else:
         start_copy = max(1, start - limit)
-        limit_copy = start - 1
+        # limit_copy = start - 1
+        limit_copy=limit
         if with_params:
             obj['previous'] = url + '&start=%d&limit=%d' % (start_copy, limit_copy)
         else:

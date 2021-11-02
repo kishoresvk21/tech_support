@@ -1,5 +1,4 @@
 from enum import unique
-from flask_restplus.resource import Resource
 from app import db
 from datetime import datetime
 
@@ -18,6 +17,7 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     queries = db.relationship('Queries', backref='user_queries')
     comments = db.relationship('Comments', backref='user_comments')
+    file = db.relationship('Files', backref='user_files')
 
     def __init__(self, name, email, mobile, technology, password, created_at, updated_at):
         self.name = name
@@ -77,6 +77,7 @@ class Comments(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now())
     updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
     status = db.Column(db.Boolean, default=True)
+    file = db.relationship('Files', backref='user_comment_files')
 
     def __init__(self, u_id, q_id, msg, created_at, updated_at):
         self.u_id = u_id
@@ -99,7 +100,6 @@ class Roles(db.Model):
         self.created_at = created_at
         self.updated_at = updated_at
 
-# db.create_all()
 
 class LikesDislikes(db.Model):
     __tablename__ = "likesdislikes"
@@ -119,62 +119,22 @@ class LikesDislikes(db.Model):
         self.created_at = created_at
         self.updated_at = updated_at
 
-# from enum import unique
-# from app import db
-# from datetime import datetime
+class Files(db.Model):
+    __tablename__ = "file"
+    id = db.Column(db.Integer, primary_key=True)
+    name=db.Column(db.String(100))
+    path=db.Column(db.String(300))
+    u_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    c_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
+    created_at = db.Column(db.DateTime, default=datetime.now())
+    updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
 
-# class User(db.Model):
-#     __tablename__ = "users"
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(80), unique=True)
-#     email = db.Column(db.String(120), unique=True)
-#     mobile = db.Column(db.String(300), unique=True)
-#     technology = db.Column(db.String(200))
-#     password = db.Column(db.String(200))
-#     created_at = db.Column(db.DateTime, default=datetime.now)
-#     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    def __init__(self,name,path,u_id, c_id,created_at, updated_at):
+        self.name=name
+        self.path=path
+        self.u_id = u_id
+        self.c_id = c_id
+        self.created_at = created_at
+        self.updated_at = updated_at
 
-#     def __init__(self, name, email, mobile, technology,password,created_at,updated_at):
-#         self.name = name
-#         self.email = email
-#         self.mobile = mobile
-#         self.technology = technology
-#         self.password=password
-#         self.created_at=created_at
-#         self.updated_at=updated_at
-
-# class technologies(db.Model):
-#     __tablename__ = "technologies"
-#     id=db.Column(db.Integer,primary_key=True )
-#     name=db.Column(db.String(80),unique=True)
-#     status=db.Column(db.Boolean)
-#     created_at=db.Column(db.DateTime,default=datetime.now())
-#     updated_at=db.Column(db.DateTime,default=datetime.now(),onupdate=datetime.now())
-
-#     def __init__(self,name,status,created_at,updated_at):
-#         self.name=name
-#         self.status=status
-#         self.created_at=created_at
-#         self.updated_at=updated_at
-
-# class Queries(db.Model):
-#     __tablename__ = "queries"
-#     id=db.Column(db.Integer,primary_key=True)
-#     u_id=db.Column(db.Integer,unique=True)
-#     title=db.Column(db.Text)
-#     description=db.Column(db.Text)
-#     images_links=db.Column(db.Text)
-#     t_id=db.Column(db.Integer)
-#     created_at=db.Column(db.DateTime,default=datetime.now())
-#     updated_at=db.Column(db.DateTime,default=datetime.now(),onupdate=datetime.now())
-
-#     def __init__(self,u_id,title,description,images_links,t_id,created_at,updated_at):
-#         self.id=id
-#         self.u_id=u_id
-#         self.title=title
-#         self.description=description
-#         self.images_links=images_links
-#         self.t_id=t_id
-#         self.created_at=created_at
-#         self.updated_at=updated_at
-
+# db.create_all()

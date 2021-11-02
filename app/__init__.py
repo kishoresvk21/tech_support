@@ -49,10 +49,10 @@ api.add_resource(GetProfile,"/admin/getuserprofile/<int:user_id>")
 api.add_resource(UserDelete,"/admin/deleteusers")
 api.add_resource(UserSearch,"/admin/usersearch")
 
-from app.admin.dashboards.views import FilterRecord,TopUsers
+from app.admin.dashboards.views import FilterRecord,TopUsersList
 api.add_resource(FilterRecord,"/admin/datefilter") #,methods="[PUT]" #/<string:from_date>/<string:to_date>/<string:record_selection>
-api.add_resource(TopUsers,"/admin/topusers/<int:users_limit>")
-
+# api.add_resource(TopUsers,"/admin/topusers/<int:users_limit>")
+api.add_resource(TopUsersList,"/admin/topusers")
 from app.admin.comments.views import CommentClass,GetCommentsByUserId,GetCommentByQuery
 api.add_resource(CommentClass,"/admin/comment") #delete edit comments
 api.add_resource(GetCommentByQuery,"/admin/comment/query")
@@ -74,6 +74,9 @@ api.add_resource(EditProfile, "/admin/editadminuserdetails")
 api.add_resource(RolesClass, "/admin/roles")
 api.add_resource(AdminUsersEditDel, "/admin/users")
 api.add_resource(GetAllAdminUsers,"/admin/getalladminusers")
+
+from app.utils.file_upload import upload
+api.add_resource(upload,"/file")
 # api.add_resource(, "/admin/users")
 # api.add_resource(TopTenUsers,"/toptenusers") # methods="[GET]"
 # from app.admin.technologies import
